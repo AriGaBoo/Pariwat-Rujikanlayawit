@@ -10,7 +10,7 @@
 </main>
 
 <footer>
-	<p>visit <a href="https://ladypingshop.wow">ladypingshop</a></p>
+	<p>visit <a href="https://ladypingshop.wow">ladypinkshop</a></p>
 </footer>
 
 <style>

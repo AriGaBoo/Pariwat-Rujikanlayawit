@@ -20,7 +20,7 @@
 			</thead>
 			<tbody>
 				{#each $vrichStore as data, i (data.stock_id)}
-					<VRichRow row={data} index={i + 1}/>
+					<VRichRow row={data} index={i + 1} />
 				{/each}
 			</tbody>
 		</table>

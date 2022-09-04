@@ -6,12 +6,18 @@ export type TCustomExcel = {
     product_code: string
     product_name: string
     size: string
+    id: number
+    cost: number
 }
 
 export const CustomExcelSchema: Schema = {
     "หมวดหมู่": {
         prop: "group",
         type: String
+    },
+    id: {
+        prop: "id",
+        type: Number,
     },
     "รหัสLive": {
         prop: "live_id",
@@ -28,6 +34,10 @@ export const CustomExcelSchema: Schema = {
     "ขนาด": {
         prop: "size",
         type: String
+    },
+    "ต้นทุน": {
+        prop: "cost",
+        type: Number
     }
     
 }

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import VRichTable from "$lib/vrich-table/VRichTable.svelte";
 	import readXlsmFile from "read-excel-file";
-	import { stocksStore, customeExcelStore, vrichStore } from "$lib/stores/stocks.store";
+	import { minimumAvailable,stocksStore, customeExcelStore, vrichStore, onlyNoLiveId, loading } from "$lib/stores/stocks.store";
 	import { stockSchema, type TStock } from "$lib/types/stock";
 	import { CustomExcelSchema, type TCustomExcel } from "$lib/types/customExcel";
-import { vrichHeader } from "$lib/types/vrich";
-import { downloadCsv } from "$lib/utils/csv";
+	import { vrichHeader } from "$lib/types/vrich";
+	import { downloadCsv } from "$lib/utils/csv";
+	import { downloadExcel, newSheet, newWorkbook } from "$lib/utils/excel";
+import Numbers from "$lib/button/Numbers.svelte";
 
 	let files: FileList;
 	$: {
@@ -33,17 +35,56 @@ import { downloadCsv } from "$lib/utils/csv";
 			customeExcelStore.set(data.rows);
 		})();
 	}
+	let minAvailable = 0
+	$: {
+		minimumAvailable.set(minAvailable)
+	}
+	$: {
+		console.log("is loading", $loading)
+	}
 
-	function downloadVRich() {
+	function downloadCSVVRich() {
+		const dataArr = getAoA({includeHeader: true});
+		const header = [...vrichHeader];
+		header.splice(0, 1);
+		const csvContent = [header, ...dataArr];
+		console.log("data arr", csvContent);
+		downloadCsv(csvContent);
+	}
+	function getAoA(options: {includeHeader: boolean} = {includeHeader: false}) {
 		const dataArr = $vrichStore.map((data) => {
-			const temp = [data.stock_id, data.sell_id, data.desc, data.unit,data.quantity, data.price, data.cost, data.delivery_cost, data.note, data.position]
-			return temp
-		})
-		const header = [...vrichHeader]
-		header.splice(0,1)
-		const csvContent = [header, ...dataArr]
-		console.log("data arr", csvContent)
-		downloadCsv(csvContent)
+			const temp = [
+				data.stock_id,
+				data.sell_id,
+				data.desc,
+				data.unit,
+				data.quantity,
+				data.price,
+				data.cost,
+				data.delivery_cost,
+				data.note,
+				data.position
+			];
+			return temp;
+		});
+		if (!options.includeHeader) {
+			return dataArr;
+		} else {
+			const header = [...vrichHeader];
+			header.splice(0, 1);
+			return [header, ...dataArr];
+		}
+	}
+	function downloadExcelFile() {
+		const aoa = getAoA({includeHeader: true});
+		const sheet = newSheet(aoa);
+		const book = newWorkbook(sheet);
+		downloadExcel(book);
+	}
+
+	function onChangeOnlyNoLiveId(event: Event) {
+		const target = <HTMLInputElement>event.target
+		onlyNoLiveId.set(target.checked)
 	}
 </script>
 
@@ -70,9 +111,24 @@ import { downloadCsv } from "$lib/utils/csv";
 		</label>
 	</div>
 	<div>
-		<button class="p-4 bg-green-400 rounded-lg hover:bg-green-600 transition ease-in-out duration-300" on:click="{downloadVRich}">Download VRich Excel</button>
+		<button
+			class="p-4 bg-green-400 rounded-lg hover:bg-green-600 transition ease-in-out duration-300"
+			on:click={downloadExcelFile}>Download VRich Excel</button
+		>
 	</div>
 </section>
+<hr class="my-8"/>
+<section class="flex flex-row justify-between" >
+	<div>
+		<div class=" text-red-600 text-[1.5rem]">Minimum Available</div>
+		<Numbers bind:num={minAvailable} />
+	</div>
+	<div class="flex flex-row items-center p-4">
+		<input id="no_live_id" type="checkbox" class="w-5 h-5 ring-2 ring-red-500 text-red-500" on:input="{onChangeOnlyNoLiveId}" />
+		<label for="no_live_id" class="pl-4">only product doesn't has live id</label>
+	</div>
+</section>
+<hr class="my-8">
 <section class="mt-8">
 	<VRichTable />
 </section>
