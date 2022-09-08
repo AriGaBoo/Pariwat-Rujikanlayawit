@@ -1,10 +1,14 @@
 <script lang="ts">
+
+
 	import type { TVRichRow } from "$lib/types/vrich";
 	import VRichCol from "./VRichCol.svelte";
 
 	export let index: number = 0;
 	export let row: TVRichRow;
 	let selected = true;
+
+
 </script>
 
 <tr
