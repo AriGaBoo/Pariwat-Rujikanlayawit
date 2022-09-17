@@ -7,17 +7,28 @@
 		customeExcelStore,
 		onlyNoLiveId,
 		loading,
-		sortBy,
-		vrichStoreSorted
+		vrichStore
 	} from "$lib/stores/stocks.store";
 	import { stockSchema, type TStock } from "$lib/types/stock";
-	import { vrichHeader, type TVRichRowKey, type TVRichRow } from "$lib/types/vrich";
-	import { downloadCsv } from "$lib/utils/csv";
-	import { downloadExcel, newSheet, newWorkbook } from "$lib/utils/excel";
+	import { vrichHeader } from "$lib/types/vrich";
+	import { downloadExcel, mappingCustomExcel, mergeExcel, newSheet, newWorkbook } from "$lib/utils/excel";
 	import { read, utils } from "xlsx";
 	import Numbers from "$lib/button/Numbers.svelte";
-	import type { TCustomExcel } from "$lib/types/customExcel";
-import VRichRow from "$lib/vrich-table/VRichRow.svelte";
+	import type { TCustomExcel, TCustomExcelImported } from "$lib/types/customExcel";
+
+	// let stockStores: TStock[] = []
+	let isLoading = false;
+
+	$: {
+		(async () => {
+			if ($customeExcelStore.length > 0 && $stocksStore.length > 0) {
+				isLoading = true
+				const data = await mergeExcel($stocksStore, $customeExcelStore);
+				vrichStore.set(data);
+				isLoading = false
+			}
+		})();
+	}
 
 	let files: FileList;
 	$: {
@@ -29,6 +40,7 @@ import VRichRow from "$lib/vrich-table/VRichRow.svelte";
 				schema: stockSchema
 			});
 			stocksStore.set(data.rows);
+			// stockStores = data.rows
 		})();
 	}
 	let customeExcelFiles: FileList;
@@ -41,43 +53,46 @@ import VRichRow from "$lib/vrich-table/VRichRow.svelte";
 			const data = await file.arrayBuffer();
 			const workbook = read(data);
 			const excelData: TCustomExcel[] = [];
-			for (const [key, value] of Object.entries(workbook.Sheets)) {
-				// console.log(key, value)
-				const json = utils.sheet_to_json<TCustomExcel>(value, {
-					header: ["group", "live_id", "id", "product_code", "product_name", "size", "cost"],
-					defval: ""
+			for (const [name, sheet] of Object.entries(workbook.Sheets)) {
+				console.log(name, sheet)
+				const json = utils.sheet_to_json<TCustomExcelImported>(sheet, {
+					// header: [
+					// 	"empty",
+					// 	"group",
+					// 	"live_id",
+					// 	"id",
+					// 	"product_code",
+					// 	"product_name",
+					// 	"size",
+					// 	"cost"
+					// ],
+					defval: "",
+
 				});
-				json.splice(0, 1);
-				excelData.push(...json);
+				// json.splice(0, 1);
+				console.log("length", json.length)
+				const data = mappingCustomExcel(json)
+				excelData.push(...data);
 			}
-			console.log("data", excelData);
+			console.log("custom excel data", excelData);
+			customeExcelStore.set(excelData)
+
+
 			// const data = await readXlsmFile<TCustomExcel>(customeExcelFiles[0], {
 			// 	schema: CustomExcelSchema,
-			// 	sheet: 3
+			// 	// sheet: 3
 			// });
 			// console.log("data", data);
-			customeExcelStore.set(excelData);
+			// customeExcelStore.set(data.rows);
 		})();
 	}
 	let minAvailable = 0;
 	$: {
 		minimumAvailable.set(minAvailable);
 	}
-	$: {
-		console.log("is loading", $loading);
-	}
 
-
-	// function downloadCSVVRich() {
-	// 	const dataArr = getAoA({ includeHeader: true });
-	// 	const header = [...vrichHeader];
-	// 	header.splice(0, 1);
-	// 	const csvContent = [header, ...dataArr];
-	// 	console.log("data arr", csvContent);
-	// 	downloadCsv(csvContent);
-	// }
 	function getAoA(options: { includeHeader: boolean } = { includeHeader: false }) {
-		const dataArr = $vrichStoreSorted.map((data) => {
+		const dataArr = $vrichStore.map((data) => {
 			const temp = [
 				data.stock_id,
 				data.sell_id,
@@ -95,7 +110,7 @@ import VRichRow from "$lib/vrich-table/VRichRow.svelte";
 		if (!options.includeHeader) {
 			return dataArr;
 		} else {
-			const header = vrichHeader.map(h => h.headerText);
+			const header = vrichHeader.map((h) => h.headerText);
 			header.splice(0, 1);
 			return [header, ...dataArr];
 		}
@@ -148,7 +163,7 @@ import VRichRow from "$lib/vrich-table/VRichRow.svelte";
 		<div class=" text-red-600 text-[1.5rem]">Minimum Available</div>
 		<Numbers bind:num={minAvailable} />
 	</div>
-	<div class="flex flex-row items-center p-4">
+	<!-- <div class="flex flex-row items-center p-4">
 		<input
 			id="no_live_id"
 			type="checkbox"
@@ -156,7 +171,7 @@ import VRichRow from "$lib/vrich-table/VRichRow.svelte";
 			on:input={onChangeOnlyNoLiveId}
 		/>
 		<label for="no_live_id" class="pl-4">only product doesn't has live id</label>
-	</div>
+	</div> -->
 </section>
 <hr class="my-8" />
 <section class="mt-8">
